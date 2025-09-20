@@ -1,33 +1,25 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import SearchBar from '../components/SearchBar';
+import axios from 'axios';
 
 const Home = () => {
-    const [city, setCity] = useState('');
-    const navigate = useNavigate();
+    const [location, setLocation] = useState('');
+    const [weatherData, setWeatherData] = useState(null);
 
-    const handleSearch = () => {
-        if (city.trim() !== "") {
-            navigate(`/weather/${city.trim()}`);
-        }
-    };
+    async function fetchWeather() {
+        setLocation()
 
+        const response = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&hourly=temperature_2m,weathercode&timezone=auto`
+    );
+        const data = response.data;
+        setWeatherData(data);
+    }
+
+    
     return (
         <div className="flex flex-col items-center justify-center p-4 text-white h-screen bg-gradient-to-b from-[#535557] to-[#a5a9ad]">
             <h1>Weather App</h1>
-            <div className="flex flex-col w-1/2 mt-8">
-                <input
-                    type="text"
-                    placeholder="Enter city name"
-                    value={city}
-                    onChange={e => setCity(e.target.value)}
-                    className="p-2 w-full rounded text-black mb-4"
-                />
-                <button
-                    onClick={handleSearch}
-                    className="p-2 w-full bg-gray-800 text-white rounded hover:bg-gray-600"
-                >
-                    Search
-                </button>
+           
             </div>
         </div>
     );

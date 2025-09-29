@@ -3,7 +3,6 @@ import Home from './pages/Home';
 import Header from './components/Header';
 import CurrentWeather from './components/CurrentWeather';
 import Weather from './pages/Weather';
-import Hero from "./pages/Hero"
 
 
 function App() {
@@ -12,8 +11,8 @@ function App() {
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/weather" element={<Weather />} />
       </Routes>
-      {/* <Weather /> */}
     </div>
   );
 }

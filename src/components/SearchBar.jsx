@@ -1,42 +1,36 @@
 import { useState } from "react";
 import axios from "axios"
 
-const SearchBar = () => {
+const SearchBar = ({onSearch}) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
-
-    const handleSearch = () => {
-        if (query.trim() !== "") {
-            console.log("Searching for:", query);
-        }
-    };
 
     const handleChange = async (e) => {
         const value = e.target.value;
         setQuery(value);
 
         if (value.length > 2) {
-            setResults([]);
-            return;
-        }
-
-        const res = await axios.get(`https://geocoding-api.open-meteo.com/v1/search?name=${value}&count=5`);
-        const data = await res.json();
-
-        if (data.results) {
-            setResults(data.results);
+            try {
+                const res = await axios.get(`https://geocoding-api.open-meteo.com/v1/search?name=${value}&count=5`);
+                
+                setResults(res.data.results || []);
+            
+            } catch (err) {
+                console.error("Error fetching cities: ", err);
+            }
         } else {
             setResults([]);
         }
-    }
 
+              
+    };
 
     const handleSelect = (city) => {
-        setQuery(city.name + ", " + city.country);
-        setResults([]);
-        onselect(city);
-    }
-
+            setQuery(city.name + ", " + city.country);
+            setResults([]);
+            onSearch(city);
+        };
+ 
 
 
     return (
@@ -50,18 +44,26 @@ const SearchBar = () => {
 
         {results.length > 0 && (
             <ul className="absolute top-full left-0 right-0 bg-white border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                <li key={city.id}
-                onClick={() => handleSelect(city)}
-                className="cursor pointer"
+               {results.map((city) => (
+                <li 
+                    key={city.id || city.name}
+                    onClick={() => handleSelect(city)}
+                    className="cursor-pointer hover:bg-gray-200"
                 >
                     {city.name}, {city.country}
                 </li>
+               ) )}
+                
             </ul>
         )}
-        <button onClick={handleSearch}
-        className="p-2 bg-gray-800 text-white rounded hover:bg-gray-600">Search</button>
+        <button 
+            onClick={() => onSearch(query)}
+            className="p-2 bg-gray-800 text-white rounded hover:bg-gray-600"
+        > 
+            Search
+        </button>
         </div>
-    )
+    );
 }
                
 

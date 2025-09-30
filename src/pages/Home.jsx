@@ -4,10 +4,10 @@ import SearchBar from '../components/SearchBar';
 
 const Home = () => {
     const navigate = useNavigate();
-    const [city, setCity] = useState(null);
+    const [selectedCity, setSelectedCity] = useState(null);
    
     const handleSearch = (city) => {
-        setCity(city);
+        setSelectedCity(city);
         navigate('/weather', { state: { city } });
     };
 

@@ -2,91 +2,77 @@ import { useState, useEffect } from 'react';
 import {useNavigate} from 'react-router-dom';
 import SearchBar from '../components/SearchBar';
 import axios from 'axios';
+import getBackground from "../utils/getBackground"
+import CurrentWeather from '../components/CurrentWeather';
+import DailyForecast from '../components/DailyForecast';
+import HourlyForecast from '../components/HourlyForecast';
+
 
 const Home = () => {
-    const navigate = useNavigate();
-    const [selectedCity, setSelectedCity] = useState(null);
     const [weather, setWeather] = useState(null);
+    const [background, setBackground] = useState(null);
+    const navigate = useNavigate();
 
-    // Handle search and navigate to Weather page
-   
-    const handleSearch = (city) => {
-        setSelectedCity(city);
-        navigate('/weather', { state: { city } });
-    };
-
+      // 🔹 Get current location
     useEffect(() => {
-        if (selectedCity) {
-            // Fetch weather data for the selected city
-            const fetchWeather = async () => {
-                try {
-                    const { latitude, longitude } = selectedCity;
-                    const res = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weathercode,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,weathercode,sunrise,sunset,windspeed_10m_max&timezone=auto`);
-                    setWeather(res.data);
-                } catch (err) {
-                    console.error("Error fetching weather data: ", err);
-                }
-            };
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
 
-            fetchWeather();
-        }
-    }, [selectedCity]);
+      const res = await axios.get(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
+      );
 
-    return (
-        <div className="flex flex-col items-center justify-center p-4 text-white h-screen bg-gradient-to-b from-[#535557] to-[#a5a9ad]">
-            <div>
-            <h1>Weather App</h1>
-            <SearchBar onSearch={handleSearch} />
-            </div>
+      const data = res.data;
 
-            <div>
-                <h2>{weather.city}</h2>
-                <p>{weather.description}</p>
-                <p>{weather.temperature}°</p>
-                <p>Windspeed: {weather.windspeed} km/h</p>
-                <p>Humidity: {weather.humidity}%</p>
-            </div>
+      setWeather({
+        city: "Your Location",
+        temperature: data.current_weather.temperature,
+        feelsLike: data.current_weather.temperature, // approx
+        humidity: 60,
+        wind: data.current_weather.windspeed,
+        description: "Sunny", // map properly if you want
+        daily: data.daily.time.map((d, i) => ({
+          date: d,
+          max: data.daily.temperature_2m_max[i],
+          min: data.daily.temperature_2m_min[i],
+        })),
+        hourly: data.hourly.time.slice(0, 24).map((t, i) => ({
+          time: t.split("T")[1],
+          temp: data.hourly.temperature_2m[i],
+        })),
+      });
 
-            <div>
-                <h2>Daily Forecast</h2>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-2">
-                    {weather && weather.daily && weather.daily.time.map((day, idx) => (
-                        <div key={day} className="bg-white/20 rounded-lg p-2">
-                            <p>{day}</p>
-                            <p>Max: {weather.daily.temperature_2m_max[idx]}°</p>
-                            <p>Min: {weather.daily.temperature_2m_min[idx]}°</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
+      setBackground(getBackground("sunny"));
+    });
+  }, []);
 
-            <div>
-                <h2>Hourly Forecast</h2>
-                <div>
-                    {weather.hourly.time.slice(0,24).map((time, idx) =>(
-                        <div>
-                            <p>{time.split("T")[1]}</p>
-                            <p>{weather.hourly.temperature_2m[idx]}°</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
+    // 🔹 Handle search from dropdown
+  const handleSearch = (city) => {
+    navigate("/weather", { state: { city } });
+  };
 
-            <div>
-                <h2>Hourly Forecast</h2>
-                <div>
-                    {weather.hourly.time.slice(0,24).map((time, idx) =>(
-                        <div>
-                            <p>{time.split("T")[1]}</p>
-                            <p>{weather.hourly.temperature_2m[idx]}°</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
+  return (
+    <div className="relative min-h-screen text-white">
+      {/* Motion Background */}
+      {background && (
+        <video autoPlay loop muted className="absolute inset-0 w-full h-full object-cover -z-10">
+          <source src={background} type="video/mp4" />
+        </video>
+      )}
+      <div className="flex flex-col items-center pt-24 px-6">
+        <SearchBar onSearch={handleSearch} />
 
-        </div>
-    );
-};
-
+        {weather && (
+          <>
+            <CurrentWeather data={weather} />
+            <DailyForecast forecast={weather.daily} />
+            <HourlyForecast forecast={weather.hourly} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default Home;

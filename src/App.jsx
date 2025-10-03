@@ -1,18 +1,17 @@
-import {Routes, Route} from 'react-router-dom';
-import Home from './pages/Home';
-import Header from './components/Header';
-import Weather from './pages/Weather';
-
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Header from "./components/Header";
+import Home from "./pages/Home";
+import Weather from "./pages/Weather";
 
 function App() {
   return (
-    <div>
+    <Router>
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/weather" element={<Weather />} />
       </Routes>
-    </div>
+    </Router>
   );
 }
 

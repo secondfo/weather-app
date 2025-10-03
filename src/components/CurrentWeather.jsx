@@ -1,23 +1,14 @@
-const CurrentWeather = ({data, location}) => {
 
-    return (
-        <div>
-           <h2>{location}</h2>
-           <div>
-            {/*Icons */}
-
-            <img src="" alt="weather icons"
-            className="w-20 h-20" />
-            <div>
-                {/*details */}
-                <p>{data.temparature}</p>
-                <p>Feels like: {data.apparent_temparature}</p>
-                <p>Humidity: {data.humidity}</p>
-                <p>wind speed: data.wind_speed</p>
-            </div>
-           </div>
-        </div>
-    );
+const CurrentWeather = ({ weather, city }) => {
+  return (
+    <div className="text-center p-6 bg-white/20 backdrop-blur-md rounded-2xl shadow-md">
+      <h2 className="text-2xl font-bold">{city}</h2>
+      <p className="text-lg">{weather.temperature}°</p>
+      <p className="text-sm">Feels like: {weather.apparent_temperature}°</p>
+      <p className="text-sm">Humidity: {weather.humidity}%</p>
+      <p className="text-sm">Wind: {weather.windspeed} km/h</p>
+    </div>
+  );
 }
 
-export default CurrentWeather;
+export default CurrentWeather; 

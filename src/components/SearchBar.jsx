@@ -1,88 +1,69 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 
-const SearchBar = ({onSearch}) => {
-    
-    const [query, setQuery] = useState("");
-    const [results, setResults] = useState([]);
-    const [loading, setLoading] = useState(false);
+function SearchBar({ onSelect }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-    const handleChange = async (e) => {
-        const value = e.target.value;
-        setQuery(value);
-
-        if (value.length < 2) {
-            setResults([]);
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            const res = await axios.get(
-                `https://geocoding-api.open-meteo.com/v1/search?name=${value}&count=5&language=en&format=json`
-            );
-
-        setResults(res.data.results || []);
-        } catch (err) {
-        console.error("Error fetching cities:", err);
-        }
-
-        setLoading(false);
+  const handleChange = async (e) => {
+    const v = e.target.value;
+    setQuery(v);
+    if (v.length < 2) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.get(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=6&language=en`
+      );
+      setResults(res.data.results || []);
+    } catch (err) {
+      console.error("geocode error", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-    const handleSelect = (city) => {
-        setQuery(city.name); // show selected city in input
-        setResults([]);
-        onSearch({
-          name: city.name,
-          country: city.country,
-          lat: city.latitude,
-          lon: city.longitude,
-        }); // pass selected city up
+  const handleSelect = (city) => {
+    setQuery(`${city.name}, ${city.country}`);
+    setResults([]);
+    // pass helpful fields to parent
+    onSelect({
+      name: city.name,
+      country: city.country,
+      latitude: city.latitude,
+      longitude: city.longitude,
+      admin1: city.admin1,
+    });
   };
 
-
-
-    return (
-        <div className="flex w-1/2 mt-8 flex-col">
-            <input type="text"
-            placeholder="Select Location"
-            value={query}
-            onChange={handleChange}
-            className="p-2 w-full rounded text-black mb-4 bg-white"
-        />
-
-        {loading && (
-        <div className="absolute right-3 top-3 text-gray-500 text-sm">...</div>
-      )}
-
+  return (
+    <div className="w-full max-w-lg relative">
+      <input
+        value={query}
+        onChange={handleChange}
+        placeholder="Search for a city (e.g. Lagos, London)..."
+        className="w-full p-3 rounded-xl bg-white text-black shadow focus:outline-none"
+      />
+      {loading && <div className="absolute right-4 top-3 text-sm text-gray-600">...</div>}
       {results.length > 0 && (
-        <ul className="absolute w-full bg-white rounded-xl mt-1 shadow-md z-50 max-h-60 overflow-y-auto">
-          {results.map((city, i) => (
+        <ul className="absolute z-50 w-full bg-white mt-2 rounded-xl shadow max-h-64 overflow-auto">
+          {results.map((c, i) => (
             <li
-              key={i}
-              className="p-3 hover:bg-gray-200 cursor-pointer"
-              onClick={() => handleSelect(city)}
+              key={`${c.latitude}-${c.longitude}-${i}`}
+              className="px-4 py-3 hover:bg-gray-100 cursor-pointer"
+              onClick={() => handleSelect(c)}
             >
-             {city.name}, {city.country}{" "}
-              {city.admin1 ? `(${city.admin1})` : ""}
+              <div className="text-sm font-medium">{c.name}{c.admin1 ? `, ${c.admin1}` : ""}</div>
+              <div className="text-xs text-gray-600">{c.country}</div>
             </li>
           ))}
         </ul>
-      )}   
-          
-        <button 
-            onClick={() => onSearch(query)}
-            className="p-2 bg-gray-800 text-white rounded hover:bg-gray-600"
-        > 
-            Search
-        </button>
-
-
-        </div>
-    );
+      )}
+    </div>
+  );
 }
-               
 
 export default SearchBar;

@@ -1,79 +1,79 @@
-import { useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import Background from "../components/Background";
 import CurrentWeather from "../components/CurrentWeather";
 import DailyForecast from "../components/DailyForecast";
 import HourlyForecast from "../components/HourlyForecast";
-import UnitsToggle from "../components/UnitsToggle";
-import getBackground from "../utils/getBackground";
+import UnitToggle from "../components/UnitToggle";
 
-const Weather = () => {
+function Weather() {
   const location = useLocation();
+  const navigate = useNavigate();
   const city = location.state?.city;
-  const [weather, setWeather] = useState(null);
-  const [background, setBackground] = useState(null);
-  const [unit, setUnit] = useState("metric");
+  const initialUnits = location.state?.units ?? "metric";
+  const [units, setUnits] = useState(initialUnits);
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    if (!city) return;
+    if (!city) {
+      // if user directly visited /weather, send them back home
+      navigate("/", { replace: true });
+      return;
+    }
 
-    // 🔹 Step 1: Get coordinates of the city
-    axios
-      .get(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`)
-      .then((geoRes) => {
-        const { latitude, longitude } = geoRes.data.results[0];
-
-        // 🔹 Step 2: Get weather for that city
-        return axios.get(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
+    const fetchWeather = async () => {
+      try {
+        const res = await axios.get(
+          `https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}` +
+          `&current_weather=true` +
+          `&hourly=temperature_2m,apparent_temperature,relativehumidity_2m,precipitation,weathercode,windspeed_10m` +
+          `&daily=temperature_2m_max,temperature_2m_min,weathercode,sunrise,sunset` +
+          `&timezone=auto`
         );
-      })
-      .then((res) => {
-        const data = res.data;
+        setData(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
-        const weatherData = {
-          city,
-          temperature: data.current_weather.temperature,
-          feelsLike: data.current_weather.temperature,
-          humidity: 60,
-          wind: data.current_weather.windspeed,
-          description: "Cloudy",
-          daily: data.daily.time.map((d, i) => ({
-            date: d,
-            max: data.daily.temperature_2m_max[i],
-            min: data.daily.temperature_2m_min[i],
-          })),
-          hourly: data.hourly.time.slice(0, 24).map((t, i) => ({
-            time: t.split("T")[1],
-            temp: data.hourly.temperature_2m[i],
-          })),
-        };
+    fetchWeather();
+  }, [city, navigate]);
 
-        setWeather(weatherData);
-        setBackground(getBackground(weatherData.description.toLowerCase()));
-      });
-  }, [city, unit]);
-
-  if (!weather) return <p className="text-white">Loading...</p>;
+  if (!city) return null;
 
   return (
-    <div className="relative min-h-screen text-white">
-      {/* Motion Background */}
-      {background && (
-        <video autoPlay loop muted className="absolute inset-0 w-full h-full object-cover -z-10">
-          <source src={background} type="video/mp4" />
-        </video>
+    <div className="relative min-h-screen">
+      {/* Background */}
+      {data && data.current_weather && (
+        <Background
+          weatherCode={data.current_weather.weathercode}
+          currentTime={data.current_weather.time}
+          sunrise={data.daily.sunrise[0]}
+          sunset={data.daily.sunset[0]}
+        />
       )}
 
-      <div className="p-6 pt-24">
-        <UnitsToggle unit={unit} onChange={setUnit} />
-        <CurrentWeather data={weather} />
-        <DailyForecast forecast={weather.daily} />
-        <HourlyForecast forecast={weather.hourly} />
+      <div className="relative z-10 pt-24 px-4 pb-12 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-white">
+            {city.name}{city.admin1 ? `, ${city.admin1}` : ""} • {city.country}
+          </h1>
+          <UnitToggle units={units} setUnits={setUnits} />
+        </div>
+
+        {data ? (
+          <>
+            <CurrentWeather current={data.current_weather} cityName={`${city.name}, ${city.country}`} units={units} />
+            <DailyForecast daily={data.daily} units={units} />
+            <HourlyForecast hourly={data.hourly} units={units} timezone={data.timezone} />
+          </>
+        ) : (
+          <p className="text-white">Loading weather for {city.name}…</p>
+        )}
       </div>
     </div>
   );
 }
-
 
 export default Weather;

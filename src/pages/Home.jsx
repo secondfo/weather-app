@@ -1,78 +1,83 @@
-import { useState, useEffect } from 'react';
-import {useNavigate} from 'react-router-dom';
-import SearchBar from '../components/SearchBar';
-import axios from 'axios';
-import getBackground from "../utils/getBackground"
-import CurrentWeather from '../components/CurrentWeather';
-import DailyForecast from '../components/DailyForecast';
-import HourlyForecast from '../components/HourlyForecast';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import SearchBar from "../components/SearchBar";
+import Background from "../components/Background";
+import CurrentWeather from "../components/CurrentWeather";
+import DailyForecast from "../components/DailyForecast";
+import HourlyForecast from "../components/HourlyForecast";
+import UnitToggle from "../components/UnitToggle";
 
+export default function Home() {
+  const [data, setData] = useState(null); // raw api response
+  const [units, setUnits] = useState("metric");
+  const navigate = useNavigate();
 
-const Home = () => {
-    const [weather, setWeather] = useState(null);
-    const [background, setBackground] = useState(null);
-    const navigate = useNavigate();
+  useEffect(() => {
+    // get current location weather
+    if (!("geolocation" in navigator)) {
+      console.warn("Geolocation not available");
+      return;
+    }
 
-      // 🔹 Get current location
-    useEffect(() => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
 
-      const res = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
-      );
-
-      const data = res.data;
-
-      setWeather({
-        city: "Your Location",
-        temperature: data.current_weather.temperature,
-        feelsLike: data.current_weather.temperature, // approx
-        humidity: 60,
-        wind: data.current_weather.windspeed,
-        description: "Sunny", // map properly if you want
-        daily: data.daily.time.map((d, i) => ({
-          date: d,
-          max: data.daily.temperature_2m_max[i],
-          min: data.daily.temperature_2m_min[i],
-        })),
-        hourly: data.hourly.time.slice(0, 24).map((t, i) => ({
-          time: t.split("T")[1],
-          temp: data.hourly.temperature_2m[i],
-        })),
-      });
-
-      setBackground(getBackground("sunny"));
+      try {
+        const res = await axios.get(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current_weather=true` +
+          `&hourly=temperature_2m,apparent_temperature,relativehumidity_2m,precipitation,weathercode,windspeed_10m` +
+          `&daily=temperature_2m_max,temperature_2m_min,weathercode,sunrise,sunset` +
+          `&timezone=auto`
+        );
+        setData(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    }, (err) => {
+      console.error("geolocation error", err);
     });
   }, []);
 
-    // 🔹 Handle search from dropdown
-  const handleSearch = (city) => {
-    navigate("/weather", { state: { city } });
+  const handleSearch = (cityObj) => {
+    // cityObj contains name, latitude, longitude
+    navigate("/weather", { state: { city: cityObj, units } });
   };
 
   return (
-    <div className="relative min-h-screen text-white">
-      {/* Motion Background */}
-      {background && (
-        <video autoPlay loop muted className="absolute inset-0 w-full h-full object-cover -z-10">
-          <source src={background} type="video/mp4" />
-        </video>
+    <div className="relative min-h-screen">
+      {/* Background based on API data */}
+      {data && data.current_weather && (
+        <Background
+          weatherCode={data.current_weather.weathercode}
+          currentTime={data.current_weather.time}
+          sunrise={data.daily.sunrise[0]}
+          sunset={data.daily.sunset[0]}
+        />
       )}
-      <div className="flex flex-col items-center pt-24 px-6">
-        <SearchBar onSearch={handleSearch} />
 
-        {weather && (
+      <div className="relative z-10 pt-24 px-4 pb-12 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-white">Weather App</h1>
+          <UnitToggle units={units} setUnits={setUnits} />
+        </div>
+
+        <SearchBar onSelect={handleSearch} />
+
+        {data ? (
           <>
-            <CurrentWeather data={weather} />
-            <DailyForecast forecast={weather.daily} />
-            <HourlyForecast forecast={weather.hourly} />
+            <div className="mt-6">
+              <CurrentWeather current={data.current_weather} cityName={"Your location"} units={units} />
+              <DailyForecast daily={data.daily} units={units} />
+              <HourlyForecast hourly={data.hourly} units={units} timezone={data.timezone} />
+            </div>
           </>
+        ) : (
+          <p className="mt-6 text-white">Loading local weather…</p>
         )}
       </div>
     </div>
   );
 }
-
-export default Home;

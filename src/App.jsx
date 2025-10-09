@@ -5,6 +5,7 @@ import Weather from "./pages/Weather";
 
 function App() {
   return (
+    <div className="min-h-screen bg-gray-900 text-white">
     <Router>
       <Header />
       <Routes>
@@ -12,6 +13,7 @@ function App() {
         <Route path="/weather" element={<Weather />} />
       </Routes>
     </Router>
+    </div>
   );
 }
 
